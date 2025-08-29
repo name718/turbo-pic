@@ -196,9 +196,11 @@ async function onDownloadVideo(item) {
 // Detail modal state & controls
 const detailOpen = ref(false)
 const detailItem = ref(null)
+const detailIndex = ref(-1)
 
 function openDetail(item) {
   detailItem.value = item
+  detailIndex.value = displayList.value.findIndex(x => x.type === item.type && x.id === item.id)
   detailOpen.value = true
   document.documentElement.style.overflow = 'hidden'
 }
@@ -211,6 +213,64 @@ function closeDetail() {
 
 function onEsc(e) {
   if (e.key === 'Escape' && detailOpen.value) closeDetail()
+  if (!detailOpen.value) return
+  if (e.key === 'ArrowRight') onNext()
+  if (e.key === 'ArrowLeft') onPrev()
+}
+
+function onNext() {
+  const list = displayList.value
+  if (!list.length) return
+  detailIndex.value = (detailIndex.value + 1 + list.length) % list.length
+  detailItem.value = list[detailIndex.value]
+}
+
+function onPrev() {
+  const list = displayList.value
+  if (!list.length) return
+  detailIndex.value = (detailIndex.value - 1 + list.length) % list.length
+  detailItem.value = list[detailIndex.value]
+}
+
+function getInitials(name) {
+  const n = (name || '').trim()
+  if (!n) return 'P'
+  const parts = n.split(/\s+/)
+  const a = parts[0]?.[0] || ''
+  const b = parts[1]?.[0] || ''
+  return (a + b).toUpperCase()
+}
+
+const toast = ref('')
+let toastTimer = null
+function showToast(msg) {
+  toast.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toast.value = '' }, 1600)
+}
+
+async function copyLink(url) {
+  const text = url || ''
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      showToast('已复制链接')
+      return
+    }
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.left = '-9999px'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    showToast(ok ? '已复制链接' : '复制失败')
+  } catch (e) {
+    console.error('copy failed', e)
+    showToast('复制失败')
+  }
 }
 
 onMounted(() => {
@@ -340,7 +400,7 @@ onMounted(() => {
           </div>
           <aside class="modal-right">
             <div class="author">
-              <div class="avatar" aria-hidden="true">📷</div>
+              <div class="avatar" aria-hidden="true">{{ getInitials(detailItem?.type==='photo' ? detailItem.photographer : detailItem.author) }}</div>
               <div class="who">
                 <div class="name">{{ detailItem?.type==='photo' ? (detailItem.photographer || '摄影作品') : (detailItem.author || '视频') }}</div>
                 <div class="meta-line">尺寸 {{ detailItem.width }} × {{ detailItem.height }}</div>
@@ -350,16 +410,21 @@ onMounted(() => {
               <button class="btn primary" @click="detailItem.type==='photo' ? onDownloadPhoto(detailItem) : onDownloadVideo(detailItem)">
                 下载
               </button>
-              <button class="btn ghost" @click="navigator.clipboard?.writeText(detailItem.url || '')">复制链接</button>
+              <button class="btn ghost" @click="copyLink(detailItem.url)">复制链接</button>
             </div>
             <div class="meta-more">
               <div class="pill">免费使用</div>
               <div class="pill">非商业/示例</div>
             </div>
+            <div class="nav-row">
+              <button class="btn ghost" @click="onPrev()">上一项</button>
+              <button class="btn ghost" @click="onNext()">下一项</button>
+            </div>
           </aside>
         </div>
       </div>
     </div>
+    <div v-if="toast" class="toast">{{ toast }}</div>
   </teleport>
 </template>
 
