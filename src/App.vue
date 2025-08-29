@@ -4,6 +4,18 @@ import { fetchCuratedPhotos, searchPhotos, fetchPopularVideos, searchVideos, map
 
 const query = ref('')
 const activeChip = ref('热门')
+const activeTab = ref('全部') // 全部 | 图片 | 视频
+
+const categories = [
+  { label: '热门', term: '' , icon: '🔥' },
+  { label: '风景', term: '风景', icon: '🏞️' },
+  { label: '城市', term: '城市', icon: '🏙️' },
+  { label: '极简', term: '极简', icon: '⚪' },
+  { label: '科技', term: '科技', icon: '🧪' },
+  { label: '动物', term: '动物', icon: '🐾' },
+  { label: '人物', term: '人物', icon: '👤' },
+  { label: '旅行', term: '旅行', icon: '✈️' },
+]
 
 const photoPage = ref(1)
 const videoPage = ref(1)
@@ -92,6 +104,19 @@ function onScroll() {
   }
 }
 
+function onVideoEnter(e) {
+  const el = e.currentTarget?.querySelector('video')
+  if (el) {
+    el.play?.().catch(() => {})
+  }
+}
+function onVideoLeave(e) {
+  const el = e.currentTarget?.querySelector('video')
+  if (el) {
+    el.pause?.()
+  }
+}
+
 onMounted(() => {
   loadInitial()
   window.addEventListener('scroll', onScroll, { passive: true })
@@ -111,12 +136,16 @@ onMounted(() => {
       </div>
     </div>
     <div class="container">
-      <div class="filters">
-        <div class="chip" :class="{ active: activeChip==='热门' }" @click="onChip('热门')">热门</div>
-        <div class="chip" :class="{ active: activeChip==='风景' }" @click="onChip('风景')">风景</div>
-        <div class="chip" :class="{ active: activeChip==='城市' }" @click="onChip('城市')">城市</div>
-        <div class="chip" :class="{ active: activeChip==='极简' }" @click="onChip('极简')">极简</div>
-        <div class="chip" :class="{ active: activeChip==='科技' }" @click="onChip('科技')">科技</div>
+      <div class="tabs">
+        <div class="tab" :class="{ active: activeTab==='全部' }" @click="activeTab='全部'">全部</div>
+        <div class="tab" :class="{ active: activeTab==='图片' }" @click="activeTab='图片'">图片</div>
+        <div class="tab" :class="{ active: activeTab==='视频' }" @click="activeTab='视频'">视频</div>
+      </div>
+      <div class="categories-scroll" aria-label="categories">
+        <div class="chip" v-for="c in categories" :key="c.label" :class="{ active: activeChip===c.label }" @click="onChip(c.label)">
+          <span class="i">{{ c.icon }}</span>
+          <span>{{ c.label }}</span>
+        </div>
       </div>
     </div>
   </header>
@@ -127,16 +156,28 @@ onMounted(() => {
         {{ errorMsg }}
       </div>
       <div class="grid">
-        <div v-for="p in photos" :key="'p-'+p.id" class="card photo">
-          <a :href="p.full" target="_blank" rel="noreferrer">
-            <img :src="p.thumbnail" class="media" :alt="p.alt || 'photo'" loading="lazy" />
-          </a>
-        </div>
-        <div v-for="v in videos" :key="'v-'+v.id" class="card video">
-          <div class="media-holder">
-            <video :src="v.mp4" playsinline muted controls preload="metadata"></video>
+        <template v-if="activeTab !== '视频'">
+          <div class="masonry">
+            <div v-for="p in photos" :key="'p-'+p.id" class="masonry-item card">
+              <a :href="p.full" target="_blank" rel="noreferrer">
+                <img :src="p.display" :srcset="p.srcset" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" class="media" :alt="p.alt || 'photo'" loading="lazy" />
+              </a>
+            </div>
           </div>
-        </div>
+        </template>
+        <template v-if="activeTab !== '图片'">
+          <div class="videos-grid">
+            <div v-for="v in videos" :key="'v-'+v.id" class="card video-card" @mouseenter="onVideoEnter" @mouseleave="onVideoLeave">
+              <div class="video-aspect">
+                <video :src="v.mp4" :poster="v.thumbnail" playsinline muted preload="metadata"></video>
+                <div class="video-overlay">
+                  <span class="play">▶</span>
+                  <span class="dur">{{ v.duration ? v.duration + 's' : '' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
       <div style="text-align:center; padding: 10px 0; color: var(--muted);">
         <span v-if="isLoading">加载中…</span>

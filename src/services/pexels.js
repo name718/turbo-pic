@@ -3,11 +3,7 @@
 const PEXELS_BASE = "https://api.pexels.com";
 
 function getApiKey() {
-	const apiKey = import.meta.env.VITE_PEXELS_API_KEY;
-	if (!apiKey) {
-		throw new Error("Missing VITE_PEXELS_API_KEY. Create a .env file based on .env.example.");
-	}
-	return apiKey;
+	return import.meta.env.VITE_PEXELS_API_KEY || "";
 }
 
 async function requestJson(path, params = {}) {
@@ -18,10 +14,13 @@ async function requestJson(path, params = {}) {
 		}
 	});
 
+	const apiKey = getApiKey();
+	if (!apiKey) {
+		throw new Error("Missing VITE_PEXELS_API_KEY");
+	}
+
 	const res = await fetch(url.toString(), {
-		headers: {
-			Authorization: getApiKey(),
-		},
+		headers: { Authorization: apiKey },
 	});
 	if (!res.ok) {
 		const text = await res.text();
@@ -31,34 +30,65 @@ async function requestJson(path, params = {}) {
 }
 
 export async function fetchCuratedPhotos(page = 1, perPage = 24) {
-	return requestJson("/v1/curated", { page, per_page: perPage });
+	try {
+		return await requestJson("/v1/curated", { page, per_page: perPage });
+	} catch (e) {
+		return buildDemoPhotos(perPage);
+	}
 }
 
 export async function searchPhotos(query, page = 1, perPage = 24) {
-	return requestJson("/v1/search", { query, page, per_page: perPage, locale: "zh-CN" });
+	try {
+		return await requestJson("/v1/search", { query, page, per_page: perPage, locale: "zh-CN" });
+	} catch (e) {
+		return buildDemoPhotos(perPage, query);
+	}
 }
 
 export async function fetchPopularVideos(page = 1, perPage = 12) {
-	return requestJson("/videos/popular", { page, per_page: perPage });
+	try {
+		return await requestJson("/videos/popular", { page, per_page: perPage });
+	} catch (e) {
+		return buildDemoVideos(perPage);
+	}
 }
 
 export async function searchVideos(query, page = 1, perPage = 12) {
-	return requestJson("/videos/search", { query, page, per_page: perPage, locale: "zh-CN" });
+	try {
+		return await requestJson("/videos/search", { query, page, per_page: perPage, locale: "zh-CN" });
+	} catch (e) {
+		return buildDemoVideos(perPage, query);
+	}
 }
 
 export function mapPhotoItems(apiResult) {
 	const photos = apiResult?.photos || [];
-	return photos.map((p) => ({
-		id: p.id,
-		width: p.width,
-		height: p.height,
-		alt: p.alt || "",
-		photographer: p.photographer,
-		url: p.url,
-		thumbnail: p.src?.medium || p.src?.small || p.src?.tiny,
-		full: p.src?.large2x || p.src?.large || p.src?.original,
-		type: "photo",
-	}));
+	return photos.map((p) => {
+		const src = p.src || {};
+		const display = src.large2x || src.large || src.medium || src.small || src.tiny;
+		const srcset = [
+			src.tiny ? `${src.tiny} 160w` : null,
+			src.small ? `${src.small} 400w` : null,
+			src.medium ? `${src.medium} 640w` : null,
+			src.large ? `${src.large} 940w` : null,
+			src.large2x ? `${src.large2x} 1880w` : null,
+		]
+			.filter(Boolean)
+			.join(', ');
+		return {
+			id: p.id,
+			width: p.width,
+			height: p.height,
+			alt: p.alt || "",
+			photographer: p.photographer,
+			url: p.url,
+			thumbnail: src.small || src.tiny || display,
+			display,
+			full: src.large2x || src.original || src.large || display,
+			srcset,
+			type: "photo",
+		};
+	});
 }
 
 export function mapVideoItems(apiResult) {
@@ -80,6 +110,53 @@ export function mapVideoItems(apiResult) {
 				: null;
 		})
 		.filter(Boolean);
+}
+
+// Demo data builders (no network / no API key)
+function buildDemoPhotos(perPage = 24, query = '') {
+	const demo = { photos: [] };
+	for (let i = 0; i < perPage; i++) {
+		const id = 1000 + i;
+		const w = 800 + ((i % 4) * 60);
+		const h = 600 + ((i % 3) * 40);
+		const url = `https://picsum.photos/id/${(i % 100) + 1}/${w}/${h}`;
+		demo.photos.push({
+			id,
+			width: w,
+			height: h,
+			alt: query ? `${query} demo` : 'demo photo',
+			photographer: 'Demo',
+			url,
+			src: { tiny: url, small: url, medium: url, large: url, large2x: url, original: url },
+		});
+	}
+	return demo;
+}
+
+function buildDemoVideos(perPage = 12, query = '') {
+	const demo = { videos: [] };
+	const samples = [
+		{
+			id: 1,
+			width: 1280,
+			height: 720,
+			duration: 6,
+			image: 'https://picsum.photos/seed/video1/1280/720',
+			video_files: [{ file_type: 'video/mp4', link: 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4' }],
+		},
+		{
+			id: 2,
+			width: 1280,
+			height: 720,
+			duration: 6,
+			image: 'https://picsum.photos/seed/video2/1280/720',
+			video_files: [{ file_type: 'video/mp4', link: 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4' }],
+		},
+	];
+	for (let i = 0; i < Math.min(perPage, samples.length); i++) {
+		demo.videos.push(samples[i]);
+	}
+	return demo;
 }
 
 
