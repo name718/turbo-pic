@@ -152,6 +152,47 @@ function onVideoLeave(e) {
   }
 }
 
+async function downloadResource(url, filename) {
+  try {
+    const res = await fetch(url, { mode: 'cors' })
+    const blob = await res.blob()
+    const a = document.createElement('a')
+    const objectUrl = URL.createObjectURL(blob)
+    a.href = objectUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(objectUrl)
+  } catch (err) {
+    console.error('download failed', err)
+    window.open(url, '_blank')
+  }
+}
+
+function inferExtFromUrl(url, fallback) {
+  const m = /\.([a-zA-Z0-9]+)(?:\?|#|$)/.exec(url || '')
+  return m ? m[1] : fallback
+}
+
+function makeSafeFilename(name) {
+  return (name || 'download').replace(/[^\w\-\.]+/g, '_')
+}
+
+async function onDownloadPhoto(item) {
+  const ext = inferExtFromUrl(item.full, 'jpg')
+  const base = item.alt || `pexels-photo-${item.id}`
+  const filename = makeSafeFilename(base) + '.' + ext
+  await downloadResource(item.full, filename)
+}
+
+async function onDownloadVideo(item) {
+  const ext = inferExtFromUrl(item.mp4, 'mp4')
+  const base = item.author || `pexels-video-${item.id}`
+  const filename = makeSafeFilename(base) + '.' + ext
+  await downloadResource(item.mp4, filename)
+}
+
 onMounted(() => {
   loadInitial()
   window.addEventListener('scroll', onScroll, { passive: true })
@@ -206,16 +247,48 @@ onMounted(() => {
         <div class="masonry">
           <div v-for="item in displayList" :key="item.type + '-' + item.id" class="masonry-item card" @mouseenter="item.type==='video' && onVideoEnter($event)" @mouseleave="item.type==='video' && onVideoLeave($event)">
             <template v-if="item.type==='photo'">
-              <a :href="item.full" target="_blank" rel="noreferrer">
-                <img :src="item.display" :srcset="item.srcset" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" class="media" :alt="item.alt || 'photo'" loading="lazy" />
-              </a>
+              <div class="hover-overlay" :style="{ backgroundColor: item.avgColor }">
+                <a :href="item.full" target="_blank" rel="noreferrer">
+                  <img :src="item.display" :srcset="item.srcset" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" class="media" :alt="item.alt || 'photo'" loading="lazy" />
+                </a>
+                <div class="meta">
+                  <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    <a :href="item.photographerUrl || item.url" target="_blank" rel="noreferrer" style="color:#fff; text-decoration:none;">{{ item.photographer || 'Pexels Photo' }}</a>
+                  </div>
+                  <div class="actions">
+                    <button class="btn icon" type="button" @click="onDownloadPhoto(item)" title="下载" aria-label="下载">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </template>
             <template v-else>
-              <div class="video-aspect">
-                <video :src="item.mp4" :poster="item.thumbnail" playsinline muted preload="metadata"></video>
-                <div class="video-overlay">
-                  <span class="play">▶</span>
-                  <span class="dur">{{ item.duration ? item.duration + 's' : '' }}</span>
+              <div class="hover-overlay">
+                <div class="video-aspect">
+                  <video :src="item.mp4" :poster="item.thumbnail" playsinline muted preload="metadata"></video>
+                  <div class="video-overlay">
+                    <span class="play">▶</span>
+                    <span class="dur">{{ item.duration ? item.duration + 's' : '' }}</span>
+                  </div>
+                </div>
+                <div class="meta">
+                  <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    <a :href="item.url || '#'" target="_blank" rel="noreferrer" style="color:#fff; text-decoration:none;">{{ item.author || 'Pexels Video' }}</a>
+                  </div>
+                  <div class="actions">
+                    <button class="btn icon" type="button" @click="onDownloadVideo(item)" title="下载" aria-label="下载">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </template>

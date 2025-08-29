@@ -81,10 +81,12 @@ export function mapPhotoItems(apiResult) {
 			height: p.height,
 			alt: p.alt || "",
 			photographer: p.photographer,
+			photographerUrl: p.photographer_url,
 			url: p.url,
 			thumbnail: src.small || src.tiny || display,
 			display,
-			full: src.large2x || src.original || src.large || display,
+			full: src.original || src.large2x || src.large || display,
+			avgColor: p.avg_color || '#0f1117',
 			srcset,
 			type: "photo",
 		};
@@ -97,6 +99,7 @@ export function mapVideoItems(apiResult) {
 		.map((v) => {
 			const mp4 = (v.video_files || []).find((f) => f.file_type === "video/mp4");
 			const picture = v.image;
+			const authorName = v.user?.name || '';
 			return mp4
 				? {
 					id: v.id,
@@ -105,6 +108,8 @@ export function mapVideoItems(apiResult) {
 					duration: v.duration,
 					thumbnail: picture,
 					mp4: mp4.link,
+					author: authorName,
+					url: v.url || '',
 					type: "video",
 				}
 				: null;
