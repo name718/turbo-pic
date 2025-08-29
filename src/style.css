@@ -100,7 +100,7 @@ a { color: inherit; text-decoration: none; }
 
 /* 视频栅格 */
 .videos-grid {
-  display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; margin-top: 16px;
+  display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-top: 12px;
 }
 .video { grid-column: span 12; }
 
