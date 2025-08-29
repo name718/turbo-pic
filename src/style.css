@@ -6,6 +6,15 @@
   --brand: #6ec1e4;
 }
 
+/* Light theme */
+:root[data-theme='light'] {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --muted: #475569;
+  --text: #0f172a;
+  --brand: #0ea5e9;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #app { height: 100%; }
@@ -30,6 +39,7 @@ a { color: inherit; text-decoration: none; }
   background: rgba(11,12,15,0.6);
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
+:root[data-theme='light'] .header { background: rgba(255,255,255,0.7); border-bottom-color: rgba(0,0,0,0.06); }
 .nav {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 0;
@@ -50,6 +60,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--card); color: var(--text);
   padding: 0 12px;
 }
+:root[data-theme='light'] .search input { border-color: rgba(0,0,0,0.06); }
 .search button {
   height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
   background: linear-gradient(135deg, #87eaf2, #6ec1e4);
@@ -65,6 +76,7 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
 }
 .chip.active { color: #0b0c0f; background: var(--brand); border-color: transparent; }
+:root[data-theme='light'] .chip { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.06); }
 
 .tabs { display: flex; gap: 8px; padding: 12px 0 6px; }
 .tab {
@@ -95,6 +107,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--card); border: 1px solid rgba(255,255,255,0.06);
   border-radius: 12px; overflow: hidden;
 }
+:root[data-theme='light'] .card { border-color: rgba(0,0,0,0.06); }
 
 .card .hover-overlay {
   position: relative;
@@ -148,6 +161,7 @@ a { color: inherit; text-decoration: none; }
 
 /* 视频卡片样式 */
 .video-card { border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); background: var(--card); }
+:root[data-theme='light'] .video-card { border-color: rgba(0,0,0,0.06); }
 .video-aspect { position: relative; aspect-ratio: 9/16; background: #0f1117; }
 .video-aspect video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .video-overlay {
@@ -159,6 +173,7 @@ a { color: inherit; text-decoration: none; }
 .video-overlay .dur { background: rgba(0,0,0,0.45); padding: 4px 6px; border-radius: 8px; }
 
 .footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 18px 0; color: var(--muted); }
+:root[data-theme='light'] .footer { border-top-color: rgba(0,0,0,0.06); }
 
 /* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); display:flex; align-items:center; justify-content:center; padding: 24px; z-index: 100; }

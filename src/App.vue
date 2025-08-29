@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { fetchCuratedPhotos, searchPhotos, fetchPopularVideos, searchVideos, mapPhotoItems, mapVideoItems } from './services/pexels'
 
 const query = ref('')
@@ -7,6 +7,7 @@ const activeChip = ref('热门')
 const activeTab = ref('全部') // 全部 | 图片 | 视频
 const mixMode = ref('均衡') // 均衡 | 视频优先 | 图片优先
 const videoRatio = ref(0.3) // 目标视频比例（仅在“全部”时生效）
+const theme = ref('dark') // dark | light
 
 const categories = [
   { label: '热门', term: '' , icon: '🔥' },
@@ -277,7 +278,40 @@ onMounted(() => {
   loadInitial()
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('keydown', onEsc)
+  const savedTheme = localStorage.getItem('tp_theme')
+  if (savedTheme === 'light' || savedTheme === 'dark') theme.value = savedTheme
+  else {
+    const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+    theme.value = prefers
+  }
+  document.documentElement.setAttribute('data-theme', theme.value)
+  if (window.matchMedia) {
+    mediaListener = (e) => {
+      if (!localStorage.getItem('tp_theme')) {
+        theme.value = e.matches ? 'light' : 'dark'
+        document.documentElement.setAttribute('data-theme', theme.value)
+      }
+    }
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    mq.addEventListener?.('change', mediaListener)
+    mq.addListener?.(mediaListener)
+  }
 })
+
+let mediaListener = null
+onUnmounted(() => {
+  if (window.matchMedia && mediaListener) {
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    mq.removeEventListener?.('change', mediaListener)
+    mq.removeListener?.(mediaListener)
+  }
+})
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  document.documentElement.setAttribute('data-theme', theme.value)
+  localStorage.setItem('tp_theme', theme.value)
+}
 </script>
 
 <template>
@@ -290,6 +324,10 @@ onMounted(() => {
       <div class="search">
         <input v-model="query" type="text" placeholder="搜索免费壁纸与短视频，例如：风景、城市、极简" @keyup.enter="onSearch" />
         <button @click="onSearch">搜索</button>
+        <button class="chip" @click="toggleTheme()" :title="theme==='dark' ? '切换为亮色' : '切换为暗色'" aria-label="主题切换">
+          <span v-if="theme==='dark'">☀️</span>
+          <span v-else>🌙</span>
+        </button>
       </div>
     </div>
     <div class="container">
@@ -423,7 +461,7 @@ onMounted(() => {
           </aside>
         </div>
       </div>
-    </div>
+  </div>
     <div v-if="toast" class="toast">{{ toast }}</div>
   </teleport>
 </template>
