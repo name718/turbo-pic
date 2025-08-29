@@ -193,9 +193,30 @@ async function onDownloadVideo(item) {
   await downloadResource(item.mp4, filename)
 }
 
+// Detail modal state & controls
+const detailOpen = ref(false)
+const detailItem = ref(null)
+
+function openDetail(item) {
+  detailItem.value = item
+  detailOpen.value = true
+  document.documentElement.style.overflow = 'hidden'
+}
+
+function closeDetail() {
+  detailOpen.value = false
+  detailItem.value = null
+  document.documentElement.style.overflow = ''
+}
+
+function onEsc(e) {
+  if (e.key === 'Escape' && detailOpen.value) closeDetail()
+}
+
 onMounted(() => {
   loadInitial()
   window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('keydown', onEsc)
 })
 </script>
 
@@ -247,16 +268,14 @@ onMounted(() => {
         <div class="masonry">
           <div v-for="item in displayList" :key="item.type + '-' + item.id" class="masonry-item card" @mouseenter="item.type==='video' && onVideoEnter($event)" @mouseleave="item.type==='video' && onVideoLeave($event)">
             <template v-if="item.type==='photo'">
-              <div class="hover-overlay" :style="{ backgroundColor: item.avgColor }">
-                <a :href="item.full" target="_blank" rel="noreferrer">
-                  <img :src="item.display" :srcset="item.srcset" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" class="media" :alt="item.alt || 'photo'" loading="lazy" />
-                </a>
+              <div class="hover-overlay" :style="{ backgroundColor: item.avgColor }" @click="openDetail(item)">
+                <img :src="item.display" :srcset="item.srcset" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" class="media" :alt="item.alt || 'photo'" loading="lazy" />
                 <div class="meta">
                   <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                     <a :href="item.photographerUrl || item.url" target="_blank" rel="noreferrer" style="color:#fff; text-decoration:none;">{{ item.photographer || 'Pexels Photo' }}</a>
                   </div>
                   <div class="actions">
-                    <button class="btn icon" type="button" @click="onDownloadPhoto(item)" title="下载" aria-label="下载">
+                    <button class="btn icon" type="button" @click.stop="onDownloadPhoto(item)" title="下载" aria-label="下载">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -268,7 +287,7 @@ onMounted(() => {
               </div>
             </template>
             <template v-else>
-              <div class="hover-overlay">
+              <div class="hover-overlay" @click="openDetail(item)">
                 <div class="video-aspect">
                   <video :src="item.mp4" :poster="item.thumbnail" playsinline muted preload="metadata"></video>
                   <div class="video-overlay">
@@ -281,7 +300,7 @@ onMounted(() => {
                     <a :href="item.url || '#'" target="_blank" rel="noreferrer" style="color:#fff; text-decoration:none;">{{ item.author || 'Pexels Video' }}</a>
                   </div>
                   <div class="actions">
-                    <button class="btn icon" type="button" @click="onDownloadVideo(item)" title="下载" aria-label="下载">
+                    <button class="btn icon" type="button" @click.stop="onDownloadVideo(item)" title="下载" aria-label="下载">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -307,6 +326,41 @@ onMounted(() => {
       © {{ new Date().getFullYear() }} 极速图界 / TurboPic · 数据源 Pexels · 免费壁纸与短视频
     </div>
   </footer>
+
+  <teleport to="body">
+    <div v-if="detailOpen" class="modal" @click.self="closeDetail()">
+      <div class="modal-body">
+        <button class="modal-close" @click="closeDetail()" aria-label="关闭">✕</button>
+        <div class="modal-content">
+          <div class="modal-left">
+            <div class="modal-media">
+              <img v-if="detailItem?.type==='photo'" :src="detailItem.full" :alt="detailItem.alt || 'photo'" />
+              <video v-else :src="detailItem.mp4" :poster="detailItem.thumbnail" controls autoplay playsinline></video>
+            </div>
+          </div>
+          <aside class="modal-right">
+            <div class="author">
+              <div class="avatar" aria-hidden="true">📷</div>
+              <div class="who">
+                <div class="name">{{ detailItem?.type==='photo' ? (detailItem.photographer || '摄影作品') : (detailItem.author || '视频') }}</div>
+                <div class="meta-line">尺寸 {{ detailItem.width }} × {{ detailItem.height }}</div>
+              </div>
+            </div>
+            <div class="actions-row">
+              <button class="btn primary" @click="detailItem.type==='photo' ? onDownloadPhoto(detailItem) : onDownloadVideo(detailItem)">
+                下载
+              </button>
+              <button class="btn ghost" @click="navigator.clipboard?.writeText(detailItem.url || '')">复制链接</button>
+            </div>
+            <div class="meta-more">
+              <div class="pill">免费使用</div>
+              <div class="pill">非商业/示例</div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <style scoped>
